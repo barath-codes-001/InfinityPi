@@ -1,26 +1,25 @@
 from flask import Flask, render_template, request, send_file
-import gmpy2
-from gmpy2 import mpfr, get_context
-from reportlab.lib.styles import getSampleStyleSheet
+from decimal import Decimal, getcontext
 from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+import tempfile
 import os
 
 app = Flask(__name__)
 
-# -----------------------------
-# Pi Calculation (Chudnovsky)
-# -----------------------------
+# -------------------------
+# Pi Calculator
+# -------------------------
 def calculate_pi(digits):
-    bits = int(digits * 3.32192809489) + 100
-    get_context().precision = bits
+    getcontext().prec = digits + 5
 
-    C = 426880 * gmpy2.sqrt(mpfr(10005))
+    C = 426880 * Decimal(10005).sqrt()
 
     M = 1
     L = 13591409
     X = 1
     K = 6
-    S = mpfr(L)
+    S = Decimal(L)
 
     terms = digits // 14 + 1
 
@@ -28,97 +27,97 @@ def calculate_pi(digits):
         M = (M * (K**3 - 16 * K)) // (i**3)
         L += 545140134
         X *= -262537412640768000
-        S += mpfr(M * L) / X
+        S += Decimal(M * L) / X
         K += 12
 
     return str(C / S)
 
 
-# -----------------------------
-# Home Page
-# -----------------------------
+# -------------------------
+# Save TXT
+# -------------------------
+def create_txt(pi, digits):
+    path = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".txt"
+    ).name
+
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(f"Pi to {digits} digits\n\n")
+        file.write(pi)
+
+    return path
+
+
+# -------------------------
+# Save PDF
+# -------------------------
+def create_pdf(pi, digits):
+    path = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".pdf"
+    ).name
+
+    doc = SimpleDocTemplate(path)
+    styles = getSampleStyleSheet()
+
+    doc.build([
+        Paragraph(f"<b>Pi to {digits} digits</b>", styles["Heading1"]),
+        Paragraph(pi, styles["BodyText"])
+    ])
+
+    return path
+
+
+# -------------------------
+# Home
+# -------------------------
 @app.route("/", methods=["GET", "POST"])
-def index():
+def home():
 
-    if request.method == "POST":
+    if request.method == "GET":
+        return render_template("index.html")
 
-        try:
-            digits = request.form.get("digits", "").strip()
+    try:
+        digits = int(request.form.get("digits", 0))
+    except ValueError:
+        return render_template(
+            "index.html",
+            error="Enter a valid number."
+        )
 
-if digits == "":
-    return render_template("index.html", error="Please enter the number of digits.")
+    if digits < 1:
+        return render_template(
+            "index.html",
+            error="Digits must be greater than zero."
+        )
 
-digits = int(digits)
+    if digits > 100000:
+        return render_template(
+            "index.html",
+            error="Maximum allowed is 100000 digits."
+        )
 
-            if digits <= 0:
-                return render_template(
-                    "index.html",
-                    error="Please enter a number greater than 0."
-                )
+    filetype = request.form.get("filetype")
 
-            pi = calculate_pi(digits)
+    pi = calculate_pi(digits)
 
-            file_type = request.form.get("filetype")
+    if filetype == "pdf":
+        filepath = create_pdf(pi, digits)
+        download_name = f"pi_{digits}.pdf"
+    else:
+        filepath = create_txt(pi, digits)
+        download_name = f"pi_{digits}.txt"
 
-if file_type not in ("txt", "pdf"):
-    return render_template("index.html", error="Please select TXT or PDF.")
-
-            if file_type == "txt":
-
-                filename = f"pi_{digits}_digits.txt"
-
-                with open(filename, "w") as f:
-                    f.write(pi)
-
-                return send_file(
-                    filename,
-                    as_attachment=True
-                )
-
-            elif file_type == "pdf":
-
-                filename = f"pi_{digits}_digits.pdf"
-
-                doc = SimpleDocTemplate(filename)
-                styles = getSampleStyleSheet()
-
-                story = []
-
-                story.append(
-                    Paragraph(
-                        f"<b>Pi to {digits} Digits</b>",
-                        styles["Heading1"]
-                    )
-                )
-
-                story.append(
-                    Paragraph(
-                        pi,
-                        styles["BodyText"]
-                    )
-                )
-
-                doc.build(story)
-
-                return send_file(
-                    filename,
-                    as_attachment=True
-                )
-
-        except Exception as e:
-    import traceback
-    traceback.print_exc()   # This prints the full error to Render logs
-
-    return render_template(
-        "index.html",
-        error=f"{type(e).__name__}: {e}"
+    return send_file(
+        filepath,
+        as_attachment=True,
+        download_name=download_name
     )
 
-    return render_template("index.html")
 
-
-# -----------------------------
-# Run App
-# -----------------------------
+# -------------------------
+# Run
+# -------------------------
 if __name__ == "__main__":
     app.run(debug=True)
