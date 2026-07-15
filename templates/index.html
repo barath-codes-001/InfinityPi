@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π Digit Generator</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>π Digit Generator</h1>
+    <p>Generate Pi to any number of digits.</p>
+
+    {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" id="piForm">
+
+        <input
+            type="number"
+            name="digits"
+            placeholder="Enter number of digits"
+            required
+            min="1">
+
+        <div class="buttons">
+
+            <button
+                type="submit"
+                name="filetype"
+                value="txt">
+                Download TXT
+            </button>
+
+            <button
+                type="submit"
+                name="filetype"
+                value="pdf">
+                Download PDF
+            </button>
+
+        </div>
+
+    </form>
+
+    <div id="loading" class="loading">
+
+        <div class="spinner"></div>
+
+        <p>Calculating π...</p>
+
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
