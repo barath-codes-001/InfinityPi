@@ -98,10 +98,13 @@ def index():
                 )
 
         except Exception as e:
-            return render_template(
-                "index.html",
-                error=str(e)
-            )
+    import traceback
+    traceback.print_exc()   # This prints the full error to Render logs
+
+    return render_template(
+        "index.html",
+        error=f"{type(e).__name__}: {e}"
+    )
 
     return render_template("index.html")
 
