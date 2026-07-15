@@ -1,0 +1,4 @@
+Flask
+gmpy2
+reportlab
+gunicorn
