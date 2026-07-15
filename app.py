@@ -43,7 +43,12 @@ def index():
     if request.method == "POST":
 
         try:
-            digits = int(request.form["digits"])
+            digits = request.form.get("digits", "").strip()
+
+if digits == "":
+    return render_template("index.html", error="Please enter the number of digits.")
+
+digits = int(digits)
 
             if digits <= 0:
                 return render_template(
@@ -53,7 +58,10 @@ def index():
 
             pi = calculate_pi(digits)
 
-            file_type = request.form["filetype"]
+            file_type = request.form.get("filetype")
+
+if file_type not in ("txt", "pdf"):
+    return render_template("index.html", error="Please select TXT or PDF.")
 
             if file_type == "txt":
 
